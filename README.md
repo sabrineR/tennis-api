@@ -8,7 +8,7 @@ REST API for listing tennis players, retrieving a player by ID, creating players
 - PostgreSQL 17, Sequelize 6, and Umzug migrations.
 - Jest and Supertest.
 - Swagger / OpenAPI, class-validator, and class-transformer.
-- Docker Compose for local PostgreSQL and isolated E2E PostgreSQL.
+- Docker and Docker Compose for local PostgreSQL, isolated E2E PostgreSQL, and a production application image.
 
 The project follows a feature-first, lightweight Clean Architecture:
 
@@ -64,6 +64,8 @@ NestJS currently runs on the host. Keep `DB_HOST=127.0.0.1` for this setup. Envi
 ## Start the project
 
 Start PostgreSQL and wait for its healthcheck:
+
+Development uses `docker-compose.yml`, which Docker Compose discovers automatically. The project name and persistent volume remain unchanged by the filename rename.
 
 ```powershell
 docker compose up -d --wait db
@@ -214,3 +216,37 @@ This preserves the development database volume. To stop and remove only the test
 ```powershell
 npm run test:db:down
 ```
+
+## Production Docker setup (EC2 Ubuntu 24.04)
+
+The production configuration is prepared for a manual deployment; no AWS deployment or CD pipeline is configured here. Use `docker-compose.prod.yml` explicitly to keep its `tennis-api-prod` project and volume separate from development and tests.
+
+On the server, create the environment file and set a strong, unique `DB_PASSWORD`:
+
+```bash
+cp .env.production.example .env.production
+chmod 600 .env.production
+```
+
+`API_HTTP_PORT` selects the EC2 host port; `PORT` selects the API container port. `API_BIND_ADDRESS` defaults to `0.0.0.0`; use `127.0.0.1` with a host reverse proxy. Restrict inbound traffic with the EC2 security group. PostgreSQL has no published port: only the API reaches `db:5432` over the private Docker backend network. The API also has a separate frontend network for its published HTTP port.
+
+Validate and start only after reviewing the target environment:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --wait
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
+```
+
+The multi-stage image contains compiled output and production dependencies, runs as a non-root user, and excludes environment files from the build context. Both services restart unless explicitly stopped. PostgreSQL must become healthy before the API starts; the API applies pending Umzug migrations and then starts NestJS. A failed migration prevents HTTP startup. The API healthcheck reads `/api/players`, checking HTTP and database access without writes.
+
+Startup migrations assume a single API instance on this EC2 host. For multiple concurrent instances, use a separate migration step before starting them. The seed is never run automatically. Initial data loading, if required, must be explicitly approved and performed once against the intended production database.
+
+Check logs or stop the production stack without deleting its persistent database volume:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 api
+docker compose --env-file .env.production -f docker-compose.prod.yml down
+```
+
+Do not use `down -v` on a database that must be retained. Keep database backups outside the instance. Configure HTTPS through a reverse proxy or load balancer before exposing real traffic; this Compose file exposes HTTP only. Changing initialization credentials in `.env.production` does not update an already initialized PostgreSQL volume.

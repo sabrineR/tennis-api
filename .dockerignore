@@ -1,0 +1,30 @@
+# Local secrets and credentials must never enter the build context.
+**/.env
+**/.env.*
+**/.aws
+**/.ssh
+**/.npmrc
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Local dependencies, generated output, and development tools.
+**/node_modules
+dist
+coverage
+**/*.tsbuildinfo
+**/*.log
+.git
+.github
+.vscode
+.idea
+.codex
+.agents
+**/AGENTS.md
+.tmp
+.temp
+test
+README.md
+compose.test.yaml
+docker-compose*.yml

@@ -1,29 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module.ts';
+import { createTestApplication } from './helpers/test-database.ts';
+import type { TestDatabaseContext } from './helpers/test-database.ts';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let context: TestDatabaseContext | undefined;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeAll(async () => {
+    context = await createTestApplication();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
+  it('/api (GET)', () => {
+    if (!context) throw new Error('Test application is not initialized');
+    return request(context.app.getHttpServer())
+      .get('/api')
       .expect(200)
       .expect('Hello World!');
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterAll(async () => {
+    await context?.close();
   });
 });

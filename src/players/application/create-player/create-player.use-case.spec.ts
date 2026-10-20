@@ -63,9 +63,13 @@ describe('CreatePlayerUseCase', () => {
   });
 
   it('propagates the error when the repository rejects creation', async () => {
-    const error = new Error('Player creation failed');
+    const cause = new Error('Insert failed');
+    const error = new Error('Player creation failed', { cause });
     repository.create.mockRejectedValue(error);
 
-    await expect(useCase.execute(input)).rejects.toBe(error);
+    const result = useCase.execute(input);
+
+    await expect(result).rejects.toBe(error);
+    await expect(result).rejects.toHaveProperty('cause', cause);
   });
 });

@@ -1,120 +1,216 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Tennis API
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+REST API for listing tennis players, retrieving a player by ID, creating players, and calculating country win ratios, average BMI, and median player height.
 
-## Description
+## Stack and architecture
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- NestJS 12 and TypeScript 6.
+- PostgreSQL 17, Sequelize 6, and Umzug migrations.
+- Jest and Supertest.
+- Swagger / OpenAPI, class-validator, and class-transformer.
+- Docker Compose for local PostgreSQL and isolated E2E PostgreSQL.
 
-## Project setup
+The project follows a feature-first, lightweight Clean Architecture:
 
-```bash
-$ npm install
+```text
+src/
+├── players/
+│   ├── domain/           # Entity, input types, repository contract
+│   ├── application/      # List, get, and create use cases
+│   ├── infrastructure/   # Sequelize model, repository, persistence mapper
+│   └── presentation/     # HTTP controller, DTOs, response mapper
+├── stats/
+│   ├── domain/           # Pure statistics calculations
+│   ├── application/      # Statistics use case
+│   └── presentation/     # HTTP controller and response DTO
+├── database/             # Connection, migrations, initial data
+└── shared/               # Application errors and HTTP configuration
 ```
 
-## Compile and run the project
+Domain and application logic remain independent of NestJS and Sequelize. NestJS modules assemble dependencies through factory providers. Schema changes use migrations, never `sequelize.sync()`.
 
-```bash
-# development
-$ npm run start
+## Prerequisites
 
-# watch mode
-$ npm run start:dev
+- Node.js 22.22.3+ in the 22.x release line, or 24.15+ in the 24.x release line (recommended), with npm.
+- Docker Desktop with Linux containers, or Docker Engine with Docker Compose.
+- Available application and PostgreSQL ports.
 
-# production mode
-$ npm run start:prod
+**Windows PowerShell:** If npm commands are blocked by the PowerShell execution policy, use `npm.cmd` instead of `npm`.
+
+Run commands from the project root. Examples use PowerShell; on macOS/Linux, use the equivalent file-copy command.
+
+## Installation and environment
+
+```powershell
+npm ci
+Copy-Item .env.example .env
 ```
 
-## Run tests
+Edit `.env` and replace the example password. The Windows development environment uses:
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```dotenv
+DB_HOST=127.0.0.1
+DB_PORT=15432
+DB_NAME=tennis
+DB_USER=tennis
+DB_PASSWORD=<choose-a-local-password>
+DB_SSL=false
 ```
 
-## Deployment
+`.env.example` defaults to port `5432`. Change it in your local `.env` when needed. **The PostgreSQL host port setting `DB_PORT` must match the Docker Compose published PostgreSQL port.** With `DB_PORT=15432`, the mapping is `127.0.0.1:15432 → container:5432`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+NestJS currently runs on the host. Keep `DB_HOST=127.0.0.1` for this setup. Environment files containing passwords must remain local.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Start the project
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Start PostgreSQL and wait for its healthcheck:
+
+```powershell
+docker compose up -d --wait db
+docker compose ps
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Compile before running migrations or the seed, which execute JavaScript from `dist/`:
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
-
-```bash
-$ npm install @nestjs/observe
+```powershell
+npm run build
+npm run db:migrate
+npm run db:seed
+npm run start:dev
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+The API is available at `http://localhost:3000/api` by default. The optional `PORT` environment variable changes the HTTP port.
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+The seed initializes the five original players from `src/database/seeders/players.json`, preserves their original IDs, skips existing IDs without overwriting their data, and aligns the PostgreSQL ID sequence. **Run it for initial setup; do not rerun it unnecessarily.** Migrations apply only pending changes.
 
-## Resources
+To run the compiled application instead of watch mode:
 
-Check out a few resources that may come in handy when working with NestJS:
+```powershell
+npm run start:prod
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Endpoints
 
-## Support
+| Method | Path | Response |
+| --- | --- | --- |
+| GET | `/api/players` | `200`, `{ "players": [...] }`, ordered by rank ascending, then ID ascending |
+| GET | `/api/players/:id` | `200` with the player, or `404` if absent |
+| POST | `/api/players` | `201` with the created player and generated ID |
+| GET | `/api/stats` | `200` with country win ratio, average BMI, and median height |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+`GET /api/players/` is also accepted as the list route. Player IDs must be positive integers; invalid IDs return `400`.
 
-## Stay in touch
+### Swagger
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- Interactive documentation: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+- OpenAPI JSON: [http://localhost:3000/api/docs-json](http://localhost:3000/api/docs-json)
 
-## License
+Swagger documents request validation, nested objects, examples, and HTTP responses. **POST, including Swagger's “Try it out”, creates a real player in the connected database.**
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Request and response examples
+
+Read players:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:3000/api/players
+Invoke-RestMethod -Uri http://localhost:3000/api/players/17
+```
+
+Example POST body, also illustrating the nested player format. Do not include an `id`:
+
+```json
+{
+  "firstname": "Alex",
+  "lastname": "Example",
+  "shortname": "A.EXA",
+  "sex": "M",
+  "country": {
+    "picture": "https://example.com/country.png",
+    "code": "FRA"
+  },
+  "picture": "https://example.com/player.png",
+  "data": {
+    "rank": 100,
+    "points": 500,
+    "weight": 80000,
+    "height": 185,
+    "age": 25,
+    "last": [1, 0, 1]
+  }
+}
+```
+
+A successful POST returns this structure with an additional generated `id`. All properties are required. Unknown properties, including `id`, are rejected. Weight is in grams, height in centimetres, and `last` contains only `0` (loss) or `1` (win).
+
+Statistics for the five original players:
+
+```json
+{
+  "bestCountry": { "code": "SRB", "winRatio": 1 },
+  "averageBmi": 23.36,
+  "medianHeightCm": 185
+}
+```
+
+Country ratios use total wins divided by total matches. Countries without matches are ignored; ties use alphabetical country-code order. Average BMI is the mean of individual BMIs after unit conversion. For an even player count, median height is the mean of the two middle heights.
+
+Only HTTP presentation rounds BMI to two decimal places and win ratios to four. An empty player list produces three `null` statistics; when no matches exist, only `bestCountry` is `null`.
+
+Example missing-player response:
+
+```json
+{
+  "statusCode": 404,
+  "code": "PLAYER_NOT_FOUND",
+  "message": "Player with ID 999 not found"
+}
+```
+
+Invalid requests return `400`. Unexpected technical errors return `500` with a generic message, without SQL, credentials, stack traces, or internal causes.
+
+## Tests
+
+Run unit tests without PostgreSQL:
+
+```powershell
+npm test
+```
+
+E2E tests use a separate Compose project, `tennis-api-test`, and exclusively the `tennis_test` database. They use the real Sequelize repository, check connection identity before writes, and apply existing migrations automatically. Development data and the development seed are not used.
+
+Prepare the test environment:
+
+```powershell
+Copy-Item .env.test.example .env.test
+```
+
+Set `TEST_DB_PORT=25432` and choose a dedicated `TEST_DB_PASSWORD`. Keep this port available and distinct from development PostgreSQL. The test bootstrap ignores the development `.env`.
+
+Run tests sequentially and always remove the temporary environment:
+
+```powershell
+npm run test:db:up
+try {
+    npm run test:e2e -- --runInBand
+} finally {
+    npm run test:db:down
+}
+```
+
+Test PostgreSQL uses temporary storage; its data is discarded when the container is removed. NestJS and Sequelize are closed by test cleanup.
+
+## Stop the project
+
+Stop NestJS with `Ctrl+C` in its terminal.
+
+Stop development PostgreSQL:
+
+```powershell
+docker compose down
+```
+
+This preserves the development database volume. To stop and remove only the test environment:
+
+```powershell
+npm run test:db:down
+```

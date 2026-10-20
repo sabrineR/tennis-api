@@ -57,4 +57,15 @@ describe('ListPlayersUseCase', () => {
 
     expect(result).toEqual([]);
   });
+
+  it('propagates the original technical error with its original cause', async () => {
+    const cause = new Error('Connection failed');
+    const error = new Error('Unable to retrieve players', { cause });
+    repository.findAllOrderedByRank.mockRejectedValue(error);
+
+    const result = useCase.execute();
+
+    await expect(result).rejects.toBe(error);
+    await expect(result).rejects.toHaveProperty('cause', cause);
+  });
 });

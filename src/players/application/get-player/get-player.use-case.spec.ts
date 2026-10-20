@@ -1,3 +1,4 @@
+import { AppError } from '../../../shared/errors/app.error.ts';
 import { Player } from '../../domain/player.entity.ts';
 import type { PlayerRepository } from '../../domain/player.repository.ts';
 import { GetPlayerUseCase } from './get-player.use-case.ts';
@@ -40,20 +41,33 @@ describe('GetPlayerUseCase', () => {
     expect(result).toBe(player);
   });
 
-  it('returns null when player 999 does not exist', async () => {
+  it('throws AppError with PLAYER_NOT_FOUND when player 999 does not exist', async () => {
     repository.findById.mockResolvedValue(null);
 
-    const result = await useCase.execute(999);
+    const result = useCase.execute(999);
 
-    expect(result).toBeNull();
+    await expect(result).rejects.toBeInstanceOf(AppError);
+    await expect(result).rejects.toMatchObject({
+      code: 'PLAYER_NOT_FOUND',
+      message: 'Player with ID 999 not found',
+    });
   });
 
   it('calls findById exactly once with the provided ID', async () => {
     repository.findById.mockResolvedValue(null);
 
-    await useCase.execute(52);
+    await expect(useCase.execute(52)).rejects.toBeInstanceOf(AppError);
 
     expect(repository.findById).toHaveBeenCalledTimes(1);
     expect(repository.findById).toHaveBeenCalledWith(52);
+  });
+
+  it('propagates the original technical error from the repository with its cause', async () => {
+    const cause = new Error('Connection failed');
+    const error = new Error('Unable to retrieve player', { cause });
+    repository.findById.mockRejectedValue(error);
+
+    await expect(useCase.execute(52)).rejects.toBe(error);
+    expect(error.cause).toBe(cause);
   });
 });

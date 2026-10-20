@@ -5,7 +5,9 @@ import { Sequelize } from 'sequelize';
 import { createDatabaseOptions } from './database.config.ts';
 
 @Module({
-  imports: [ConfigModule.forRoot({ ignoreEnvFile: process.env.NODE_ENV === 'test' })],
+  imports: [
+    ConfigModule.forRoot({ ignoreEnvFile: process.env.NODE_ENV === 'test' }),
+  ],
   providers: [
     {
       provide: Sequelize,

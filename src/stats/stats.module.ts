@@ -8,10 +8,13 @@ import { StatsController } from './presentation/stats.controller.ts';
 @Module({
   imports: [PlayersModule],
   controllers: [StatsController],
-  providers: [{
-    provide: GetStatsUseCase,
-    inject: [PLAYER_REPOSITORY],
-    useFactory: (repository: PlayerRepository): GetStatsUseCase => new GetStatsUseCase(repository),
-  }],
+  providers: [
+    {
+      provide: GetStatsUseCase,
+      inject: [PLAYER_REPOSITORY],
+      useFactory: (repository: PlayerRepository): GetStatsUseCase =>
+        new GetStatsUseCase(repository),
+    },
+  ],
 })
 export class StatsModule {}

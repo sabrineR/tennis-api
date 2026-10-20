@@ -12,7 +12,12 @@ export function createDatabaseOptions(config: ConfigService): Options {
 
   const portValue = config.get<string>('DB_PORT') ?? '5432';
   const port = Number(portValue);
-  if (!/^\d+$/.test(portValue) || !Number.isInteger(port) || port < 1 || port > 65535) {
+  if (
+    !/^\d+$/.test(portValue) ||
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65535
+  ) {
     throw new Error('DB_PORT must be an integer between 1 and 65535');
   }
 

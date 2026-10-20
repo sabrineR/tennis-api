@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Format, lint, tests and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      TEST_DB_PORT: '25432'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.20.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npm test -- --runInBand
+
+      - name: Generate temporary test credentials
+        shell: bash
+        run: |
+          password="$(openssl rand -hex 32)"
+          echo "::add-mask::$password"
+          echo "TEST_DB_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Start isolated PostgreSQL
+        id: database
+        run: docker compose --env-file /dev/null -p tennis-api-ci -f compose.test.yaml up -d --wait --wait-timeout 90 db-test
+
+      # The test bootstrap checks the DB identity and applies pending migrations.
+      - name: E2E tests
+        run: npm run test:e2e -- --runInBand
+
+      - name: Build
+        run: npm run build
+
+      - name: Stop isolated PostgreSQL
+        if: ${{ always() && steps.database.outcome != 'skipped' && steps.database.outcome != '' }}
+        run: docker compose --env-file /dev/null -p tennis-api-ci -f compose.test.yaml down

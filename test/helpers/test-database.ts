@@ -24,11 +24,21 @@ export async function createTestApplication(): Promise<TestDatabaseContext> {
   const portText = process.env.TEST_DB_PORT ?? settings.TEST_DB_PORT ?? '25432';
   const password = process.env.TEST_DB_PASSWORD ?? settings.TEST_DB_PASSWORD;
   const port = Number(portText);
-  if (!/^\d+$/.test(portText) || !Number.isInteger(port) || port < 1024 || port > 65535 || [5432, 5433, 15432].includes(port)) {
-    throw new Error('Unsafe test port: use a dedicated port, distinct from existing PostgreSQL instances.');
+  if (
+    !/^\d+$/.test(portText) ||
+    !Number.isInteger(port) ||
+    port < 1024 ||
+    port > 65535 ||
+    [5432, 5433, 15432].includes(port)
+  ) {
+    throw new Error(
+      'Unsafe test port: use a dedicated port, distinct from existing PostgreSQL instances.',
+    );
   }
   if (!password || password === 'replace-with-a-test-only-password') {
-    throw new Error('Set a test-only TEST_DB_PASSWORD in .env.test or the process environment.');
+    throw new Error(
+      'Set a test-only TEST_DB_PASSWORD in .env.test or the process environment.',
+    );
   }
 
   const environment: Record<string, string> = {
@@ -40,7 +50,9 @@ export async function createTestApplication(): Promise<TestDatabaseContext> {
     DB_PASSWORD: password,
     DB_SSL: 'false',
   };
-  const previous = new Map(Object.keys(environment).map((key) => [key, process.env[key]]));
+  const previous = new Map(
+    Object.keys(environment).map((key) => [key, process.env[key]]),
+  );
   Object.assign(process.env, environment);
   const restoreEnvironment = (): void => {
     for (const [key, value] of previous) {
@@ -64,15 +76,27 @@ export async function createTestApplication(): Promise<TestDatabaseContext> {
   let moduleFixture: TestingModule | undefined;
 
   const assertIdentity = async (): Promise<void> => {
-    const identity = await sequelize.query<{ database: string; username: string; port: number }>(
+    const identity = await sequelize.query<{
+      database: string;
+      username: string;
+      port: number;
+    }>(
       'SELECT current_database() AS database, current_user AS username, inet_server_port() AS port',
       { type: QueryTypes.SELECT },
     );
-    if (identity.length !== 1 || identity[0].database !== 'tennis_test' || identity[0].username !== 'tennis_test' || identity[0].port !== 5432) {
+    if (
+      identity.length !== 1 ||
+      identity[0].database !== 'tennis_test' ||
+      identity[0].username !== 'tennis_test' ||
+      identity[0].port !== 5432
+    ) {
       throw new Error('Unsafe database identity: test operations refused.');
     }
     for (const [key, value] of Object.entries(environment)) {
-      if (process.env[key] !== value) throw new Error('Test database environment changed; operations refused.');
+      if (process.env[key] !== value)
+        throw new Error(
+          'Test database environment changed; operations refused.',
+        );
     }
   };
 
@@ -116,7 +140,10 @@ export async function createTestApplication(): Promise<TestDatabaseContext> {
     try {
       await close();
     } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], 'Test initialization and cleanup failed.');
+      throw new AggregateError(
+        [error, cleanupError],
+        'Test initialization and cleanup failed.',
+      );
     }
     throw error;
   }

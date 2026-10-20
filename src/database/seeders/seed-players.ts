@@ -28,9 +28,12 @@ async function seedPlayers(): Promise<void> {
 
     await sequelize.transaction(async (transaction) => {
       // Serialize seeds and block concurrent inserts while aligning the sequence.
-      await sequelize.query('LOCK TABLE "players" IN SHARE ROW EXCLUSIVE MODE', {
-        transaction,
-      });
+      await sequelize.query(
+        'LOCK TABLE "players" IN SHARE ROW EXCLUSIVE MODE',
+        {
+          transaction,
+        },
+      );
       await PlayerModel.bulkCreate(rows, {
         ignoreDuplicates: true,
         transaction,
@@ -49,16 +52,20 @@ async function seedPlayers(): Promise<void> {
       );
     });
   } catch (error) {
-    failures.push(new Error('Unable to seed players; existing rows are not overwritten.', {
-      cause: error,
-    }));
+    failures.push(
+      new Error('Unable to seed players; existing rows are not overwritten.', {
+        cause: error,
+      }),
+    );
   } finally {
     try {
       await sequelize.close();
     } catch (error) {
-      failures.push(new Error('Unable to close the seed database connection.', {
-        cause: error,
-      }));
+      failures.push(
+        new Error('Unable to close the seed database connection.', {
+          cause: error,
+        }),
+      );
     }
   }
 
@@ -66,13 +73,20 @@ async function seedPlayers(): Promise<void> {
     throw failures[0];
   }
   if (failures.length > 1) {
-    throw new AggregateError(failures, 'Player seed and connection cleanup failed.');
+    throw new AggregateError(
+      failures,
+      'Player seed and connection cleanup failed.',
+    );
   }
-  console.info('Player seed completed; existing IDs were preserved and the sequence aligned.');
+  console.info(
+    'Player seed completed; existing IDs were preserved and the sequence aligned.',
+  );
 }
 
 void seedPlayers().catch((error: unknown) => {
   // Keep the cause on the error without printing SQL or connection credentials.
-  console.error(error instanceof Error ? error.message : 'Unexpected player seed failure.');
+  console.error(
+    error instanceof Error ? error.message : 'Unexpected player seed failure.',
+  );
   process.exitCode = 1;
 });

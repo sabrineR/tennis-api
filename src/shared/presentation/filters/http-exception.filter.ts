@@ -10,7 +10,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
 
-    if (exception instanceof AppError && exception.code === 'PLAYER_NOT_FOUND') {
+    if (
+      exception instanceof AppError &&
+      exception.code === 'PLAYER_NOT_FOUND'
+    ) {
       response.status(HttpStatus.NOT_FOUND).json({
         statusCode: HttpStatus.NOT_FOUND,
         code: exception.code,
@@ -29,11 +32,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const candidate: unknown = body.message;
         if (typeof candidate === 'string') {
           message = candidate;
-        } else if (Array.isArray(candidate) && candidate.every((item) => typeof item === 'string')) {
+        } else if (
+          Array.isArray(candidate) &&
+          candidate.every((item) => typeof item === 'string')
+        ) {
           message = candidate as string[];
         }
       }
-      response.status(statusCode).json({ statusCode, code: 'HTTP_ERROR', message });
+      response
+        .status(statusCode)
+        .json({ statusCode, code: 'HTTP_ERROR', message });
       return;
     }
 

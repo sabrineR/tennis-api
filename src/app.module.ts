@@ -9,6 +9,9 @@ import { StatsModule } from './stats/stats.module.ts';
 @Module({
   imports: [PlayersModule, StatsModule],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_FILTER, useClass: HttpExceptionFilter }],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+  ],
 })
 export class AppModule {}

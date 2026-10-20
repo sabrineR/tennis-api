@@ -27,6 +27,8 @@ async function run(): Promise<void> {
 
 void run().catch((error: unknown) => {
   const name = error instanceof Error ? error.name : 'UnknownError';
-  console.error(`Migration failed (${name}). Check database configuration and migration state.`);
+  console.error(
+    `Migration failed (${name}). Check database configuration and migration state.`,
+  );
   process.exitCode = 1;
 });

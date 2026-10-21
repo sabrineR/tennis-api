@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Deploy Tennis API through the administrator-installed root script. No caller-supplied commands.",
+  "parameters": {
+    "CommitSha": {
+      "type": "String",
+      "description": "Latest master commit with successful CI",
+      "allowedPattern": "^[0-9a-f]{40}$",
+      "interpolationType": "ENV_VAR"
+    },
+    "ImageDigest": {
+      "type": "String",
+      "description": "GHCR sha256 image digest",
+      "allowedPattern": "^sha256:[0-9a-f]{64}$",
+      "interpolationType": "ENV_VAR"
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "deploy",
+      "inputs": {
+        "timeoutSeconds": "900",
+        "runCommand": [
+          "#!/bin/bash",
+          "set -euo pipefail",
+          "set +x",
+          "[[ \"${SSM_CommitSha:-}\" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid or unavailable commit parameter.' >&2; exit 1; }",
+          "[[ \"${SSM_ImageDigest:-}\" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'Invalid or unavailable image digest.' >&2; exit 1; }",
+          "exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root /usr/local/sbin/tennis-api-deploy \"$SSM_CommitSha\" \"$SSM_ImageDigest\""
+        ]
+      }
+    }
+  ]
+}

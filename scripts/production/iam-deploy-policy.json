@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SendOnlyApprovedDocumentToExistingInstance",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": [
+        "arn:aws:ssm:eu-west-3:ACCOUNT_ID:document/TennisApiDeployProductionV1",
+        "arn:aws:ec2:eu-west-3:ACCOUNT_ID:instance/i-066749c37a26e8556"
+      ],
+      "Condition": {
+        "StringEquals": { "aws:RequestedRegion": "eu-west-3" }
+      }
+    },
+    {
+      "Sid": "ReadInvocationStatusInDeploymentRegion",
+      "Effect": "Allow",
+      "Action": "ssm:GetCommandInvocation",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:RequestedRegion": "eu-west-3" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+# Root-owned administrative template for /etc/tennis-api/compose.yml.
+# Confirm existing volume, networks and Caddy upstream before installation.
+name: tennis-api-prod
+services:
+  api:
+    image: ${API_IMAGE:?Deployment script must supply a digest}
+    user: '1000:1000'
+    entrypoint: [node]
+    command: [dist/main.js]
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DB_HOST: db
+      DB_PORT: '5432'
+      DB_NAME: ${DB_NAME:?Required}
+      DB_USER: ${DB_USER:?Required}
+      DB_PASSWORD: ${DB_PASSWORD:?Required}
+      DB_SSL: 'false'
+    ports:
+      - '127.0.0.1:3000:3000'
+    networks: [frontend, backend]
+    read_only: true
+    tmpfs: ['/tmp:size=64m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      test: [CMD, node, -e, "const h=require('node:http');const r=h.get('http://127.0.0.1:3000/api/players',s=>{s.resume();process.exit(s.statusCode===200?0:1)});r.setTimeout(3000,()=>r.destroy());r.on('error',()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Required}
+      POSTGRES_USER: ${DB_USER:?Required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Required}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+networks:
+  frontend:
+    external: true
+    name: tennis-api-prod_frontend
+  backend:
+    external: true
+    name: tennis-api-prod_backend
+volumes:
+  postgres_data:
+    external: true
+    name: tennis-api-prod_postgres_data
